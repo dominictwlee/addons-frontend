@@ -89,12 +89,14 @@ describe(__filename, () => {
 
   function _editUserAccount({
     store,
+    picture = null,
     userFields = {},
     userId = 'user-id',
     errorHandlerId = createStubErrorHandler().id,
   }) {
     store.dispatch(editUserAccount({
       errorHandlerId,
+      picture,
       userFields,
       userId,
     }));
@@ -372,6 +374,7 @@ describe(__filename, () => {
 
     sinon.assert.calledWith(dispatchSpy, editUserAccount({
       errorHandlerId: errorHandler.id,
+      picture: null,
       userFields: {
         biography: user.biography,
         display_name: user.display_name,
@@ -463,6 +466,7 @@ describe(__filename, () => {
 
     sinon.assert.calledWith(dispatchSpy, editUserAccount({
       errorHandlerId: errorHandler.id,
+      picture: null,
       userFields: {
         biography: user.biography,
         display_name: user.display_name,

@@ -9,8 +9,10 @@ import { compose } from 'redux';
 
 import Link from 'amo/components/Link';
 import NotFound from 'amo/components/ErrorPage/NotFound';
+import UserProfileEditPicture from 'amo/components/UserProfileEditPicture';
 import {
   editUserAccount,
+  deleteUserPicture,
   fetchUserAccount,
   getCurrentUser,
   getUserByUsername,
@@ -56,12 +58,14 @@ type FormValues = {|
   homepage: string | null,
   location: string | null,
   occupation: string | null,
+  picture: File | null,
   username: string,
 |};
 
 type State = {|
   ...FormValues,
-  displaySuccessMessage: boolean,
+  pictureData: string | null,
+  successMessage: string | null,
 |};
 
 export class UserProfileEditBase extends React.Component<Props, State> {
@@ -69,7 +73,8 @@ export class UserProfileEditBase extends React.Component<Props, State> {
     super(props);
 
     this.state = {
-      displaySuccessMessage: false,
+      pictureData: null,
+      successMessage: null,
       ...this.getFormValues(props.user),
     };
   }
@@ -86,11 +91,17 @@ export class UserProfileEditBase extends React.Component<Props, State> {
   }
 
   componentWillReceiveProps(props: Props) {
-    const { isUpdating: wasUpdating, username: oldUsername } = this.props;
+    const {
+      isUpdating: wasUpdating,
+      user: oldUser,
+      username: oldUsername,
+    } = this.props;
+
     const {
       clientApp,
       dispatch,
       errorHandler,
+      i18n,
       isUpdating,
       lang,
       params,
@@ -109,12 +120,23 @@ export class UserProfileEditBase extends React.Component<Props, State> {
 
       this.setState({
         ...this.getFormValues(newUser),
-        displaySuccessMessage: false,
+        pictureData: null,
+        successMessage: null,
       });
     }
 
     if (wasUpdating && !isUpdating && !errorHandler.hasError()) {
-      this.setState({ displaySuccessMessage: true });
+      this.setState({
+        pictureData: null,
+        successMessage: i18n.gettext('Profile successfully updated'),
+      });
+    }
+
+    if (oldUser && oldUser.picture_url && newUser && !newUser.picture_url) {
+      this.setState({
+        pictureData: null,
+        successMessage: i18n.gettext('Picture successfully deleted'),
+      });
     }
 
     if (params.username && oldUsername !== newUsername) {
@@ -122,14 +144,48 @@ export class UserProfileEditBase extends React.Component<Props, State> {
     }
   }
 
-  onFieldChange = (event: SyntheticEvent<HTMLInputElement>) => {
-    const { name, value } = event.currentTarget;
-
+  onPictureChange = (event: SyntheticEvent<HTMLInputElement>) => {
     event.preventDefault();
+
+    const { files } = event.currentTarget;
+
+    if (files && files[0]) {
+      const picture = files[0];
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.setState({ pictureData: e.target.result });
+      };
+      reader.readAsDataURL(picture);
+
+      this.setState({
+        picture,
+        successMessage: null,
+      });
+    }
+  }
+
+  onPictureDelete = (event: SyntheticEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    const { dispatch, errorHandler, user } = this.props;
+
+    invariant(user, 'user is required');
+
+    dispatch(deleteUserPicture({
+      errorHandlerId: errorHandler.id,
+      userId: user.id,
+    }));
+  }
+
+  onFieldChange = (event: SyntheticEvent<HTMLInputElement>) => {
+    event.preventDefault();
+
+    const { name, value } = event.currentTarget;
 
     this.setState({
       [name]: value,
-      displaySuccessMessage: false,
+      successMessage: null,
     });
   }
 
@@ -143,6 +199,7 @@ export class UserProfileEditBase extends React.Component<Props, State> {
       homepage,
       location,
       occupation,
+      picture,
       username,
     } = this.state;
 
@@ -150,6 +207,7 @@ export class UserProfileEditBase extends React.Component<Props, State> {
 
     dispatch(editUserAccount({
       errorHandlerId: errorHandler.id,
+      picture,
       userFields: {
         biography,
         display_name: displayName,
@@ -169,6 +227,7 @@ export class UserProfileEditBase extends React.Component<Props, State> {
       homepage: '',
       location: '',
       occupation: '',
+      picture: null,
       username: this.props.username,
     };
 
@@ -186,6 +245,7 @@ export class UserProfileEditBase extends React.Component<Props, State> {
     } = user;
 
     return {
+      ...defaultFormValues,
       biography,
       displayName,
       homepage,
@@ -257,9 +317,9 @@ export class UserProfileEditBase extends React.Component<Props, State> {
           <div className="UserProfileEdit-form-messages">
             {errorHandler.renderErrorIfPresent()}
 
-            {this.state.displaySuccessMessage && (
+            {this.state.successMessage && (
               <Notice type="success">
-                {i18n.gettext('Profile successfully updated')}
+                {this.state.successMessage}
               </Notice>
             )}
           </div>
@@ -393,6 +453,14 @@ export class UserProfileEditBase extends React.Component<Props, State> {
                 name="occupation"
                 onChange={this.onFieldChange}
                 value={this.state.occupation}
+              />
+
+              <UserProfileEditPicture
+                name="picture"
+                onDelete={this.onPictureDelete}
+                onSelect={this.onPictureChange}
+                preview={this.state.pictureData}
+                user={user}
               />
             </Card>
 

@@ -34,7 +34,7 @@ type Props = {|
   errorHandler: ErrorHandlerType,
   i18n: I18nType,
   params: {| username: string |},
-  user?: UserType,
+  user: UserType | null,
 |};
 
 export class UserProfileBase extends React.Component<Props> {
