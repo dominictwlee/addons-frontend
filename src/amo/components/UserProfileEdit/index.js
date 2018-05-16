@@ -68,6 +68,12 @@ type State = {|
   successMessage: string | null,
 |};
 
+type FileReaderEvent = {|
+  target: {|
+    result: string,
+  |},
+|};
+
 export class UserProfileEditBase extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -144,6 +150,10 @@ export class UserProfileEditBase extends React.Component<Props, State> {
     }
   }
 
+  onPictureLoaded = (e: FileReaderEvent) => {
+    this.setState({ pictureData: e.target.result });
+  }
+
   onPictureChange = (event: SyntheticEvent<HTMLInputElement>) => {
     event.preventDefault();
 
@@ -152,11 +162,7 @@ export class UserProfileEditBase extends React.Component<Props, State> {
     if (files && files[0]) {
       const picture = files[0];
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.setState({ pictureData: e.target.result });
-      };
-      reader.readAsDataURL(picture);
+      this.loadPicture(picture);
 
       this.setState({
         picture,
@@ -253,6 +259,12 @@ export class UserProfileEditBase extends React.Component<Props, State> {
       occupation,
       username,
     };
+  }
+
+  loadPicture = (picture: File) => {
+    const reader = new FileReader();
+    reader.onload = this.onPictureLoaded;
+    reader.readAsDataURL(picture);
   }
 
   preventSubmit() {
